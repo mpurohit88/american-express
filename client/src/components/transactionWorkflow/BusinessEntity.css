@@ -1,0 +1,10 @@
+ul {
+  list-style-type: none;
+  padding-inline-start: 10px !important;
+  user-select: none;
+}
+
+li {
+  padding-top: 5px;
+  cursor: pointer;
+}
