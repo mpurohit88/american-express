@@ -1,10 +1,10 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import {
   Box,
   Typography
 } from '@material-ui/core';
 import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
-import Canvas from '../Canvas';
 
 import {
   Heading,
@@ -12,18 +12,29 @@ import {
   DisableButton
 } from '../materialUI';
 
+import Canvas from '../Canvas';
+
+import { downloadJSON } from '../../utilities/downloadHelper';
+
 import './Home.css';
 
-export default function Workflow({ removeEntity, rectDraw }) {
-  const downloadSchema = () => {
+export default function Workflow({ removeEntity, workflow }) {
+  const businessEntityObj = useSelector(state => state.businessEntity);
 
+  const downloadSchema = () => {
+    let result = { "transactionWorkflow": [] };
+    workflow.map(key => {
+      result.transactionWorkflow.push(businessEntityObj[key]);
+    });
+
+    downloadJSON("transactionWorkflowModel.json", JSON.stringify(result));
   }
 
   return <div className="border">
     <div className="heading">
       <Heading text="Transaction Workflow Model" />
       {
-        rectDraw.length === 0 ?
+        workflow.length === 0 ?
           <DisableButton text="Download" />
           :
           <PrimaryButton onClick={downloadSchema} text="Download" />
@@ -38,7 +49,7 @@ export default function Workflow({ removeEntity, rectDraw }) {
       }}
     >
       {
-        rectDraw.length > 0 ? <><ArrowDownwardIcon sx={{ color: "red" }} />
+        workflow.length > 0 ? <><ArrowDownwardIcon sx={{ color: "red" }} />
           <Typography
             color="textSecondary"
             variant="caption"
@@ -47,6 +58,6 @@ export default function Workflow({ removeEntity, rectDraw }) {
           </Typography> </> : null
       }
     </Box>
-    <Canvas rectDraw={rectDraw} removeEntity={removeEntity} />
+    <Canvas rectDraw={workflow} removeEntity={removeEntity} />
   </div>
 }

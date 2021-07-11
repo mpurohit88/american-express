@@ -8,10 +8,14 @@ import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
 
 import { Heading } from '../materialUI';
 
+import { getObjectKeys } from '../../utilities/objectHelper';
+
 import './BusinessEntity.css';
 
-export default function BusinessEntity({ rectDraw, drawRect }) {
-  const businessEntity = useSelector(state => state.businessEntity);
+export default function BusinessEntity({ workflow, addWorkflow }) {
+  const businessEntityObj = useSelector(state => state.businessEntity);
+
+  const businessEntities = getObjectKeys(businessEntityObj);
 
   return <>
     <Heading text="Business Entity" />
@@ -23,7 +27,7 @@ export default function BusinessEntity({ rectDraw, drawRect }) {
       }}
     >
       {
-        (rectDraw.length === businessEntity.length) ? null : <><ArrowDownwardIcon sx={{ color: "red" }} />
+        (workflow.length === businessEntities.length) ? null : <><ArrowDownwardIcon sx={{ color: "red" }} />
           <Typography
             color="textSecondary"
             variant="caption"
@@ -34,10 +38,10 @@ export default function BusinessEntity({ rectDraw, drawRect }) {
     </Box>
     <ul>
       {
-        (businessEntity || []).map((entity, index) => {
-          if (rectDraw.find(element => element === entity)) return null;
+        (businessEntities || []).map((entity, index) => {
+          if (workflow.find(element => element === entity)) return null;
 
-          return <li key={index} onClick={() => drawRect(entity)}>{entity}</li>
+          return <li key={index} onClick={() => addWorkflow(entity)}>{entity}</li>
         })
       }
     </ul>

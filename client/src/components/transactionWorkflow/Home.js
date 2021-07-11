@@ -10,14 +10,14 @@ import BusinessEntity from './BusinessEntity';
 import Workflow from './Workflow';
 
 const Home = () => {
-  const [rectDraw, setRectDraw] = useState([])
+  const [workflow, setWorkflow] = useState([])
 
   const removeEntity = (entityName) => {
-    setRectDraw(rectDraw.filter(entity => entity !== entityName));
+    setWorkflow(workflow.filter(entity => entity !== entityName));
   }
 
-  const drawRect = (entity) => {
-    setRectDraw([...rectDraw, entity])
+  const addWorkflow = (entity) => {
+    setWorkflow([...workflow, entity])
   }
 
   return <Box
@@ -39,7 +39,7 @@ const Home = () => {
           xl={3}
           xs={12}
         >
-          <BusinessEntity rectDraw={rectDraw} drawRect={drawRect} />
+          <BusinessEntity workflow={workflow} addWorkflow={addWorkflow} />
         </Grid>
         <Grid
           item
@@ -48,7 +48,7 @@ const Home = () => {
           xl={9}
           xs={12}
         >
-          <Workflow rectDraw={rectDraw} removeEntity={removeEntity} />
+          <Workflow workflow={workflow} removeEntity={removeEntity} />
         </Grid>
       </Grid>
     </Container>
