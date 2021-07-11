@@ -1,8 +1,8 @@
-# american-express | transaction workflow excercise
+# american-express | transaction workflow exercise
 
 ## UI Project Setup
 
-1. Navigate inside client folder using command 'cd client'
-2. Install dependincies using command 'npm install'
-3. Run project using command 'npm start'
-4. You should be able to access applicationi on localhost:3000 port
+1. Navigate inside client directory using command `cd ./client`
+2. Install dependencies using command `npm install`
+3. Start development server using command `npm start`
+4. You should be able to access application on `localhost:3000`
