@@ -35,9 +35,9 @@ export default function Workflow({ removeEntity, workflow }) {
       <Heading text="Transaction Workflow Model" />
       {
         workflow.length === 0 ?
-          <DisableButton text="Download" />
+          <DisableButton text="Download JSON" />
           :
-          <PrimaryButton onClick={downloadSchema} text="Download" />
+          <PrimaryButton onClick={downloadSchema} text="Download JSON" />
       }
     </div>
 
