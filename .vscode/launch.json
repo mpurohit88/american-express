@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Launch App",
+      "request": "launch",
+      "mainClass": "App",
+      "projectName": "american-express_21ec2aca"
+    },
+    {
+      "type": "java",
+      "name": "Launch DatapipelineApplication",
+      "request": "launch",
+      "mainClass": "com.americanexpress.datapipeline.DatapipelineApplication",
+      "projectName": "datapipeline"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-AmericanExpressApplication<americanexpress>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "mainClass": "com.datapipeline.americanexpress.AmericanExpressApplication",
+      "projectName": "americanexpress",
+      "args": ""
+    }
+  ]
+}
