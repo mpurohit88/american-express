@@ -1,6 +1,7 @@
 {
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.project.sourcePaths": [
-    "server/datapipelinepoc/src"
+    "server/datapipelinepoc/src",
+    "server/demo/src/main/java/com/example/demo"
   ]
 }
