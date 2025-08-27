@@ -390,8 +390,21 @@ class QuizConverter:
             return True
         return False
     
+    def get_record_identifier(self, record: tuple) -> str:
+        """Extract meta_id and post_id for record identification"""
+        try:
+            # Assuming standard WordPress postmeta structure: (meta_id, post_id, meta_key, meta_value)
+            # Adjust these indices based on your table structure
+            meta_id = record[0] if len(record) > 0 else "unknown"
+            post_id = record[1] if len(record) > 1 else "unknown"
+            return "meta_id={}, post_id={}".format(meta_id, post_id)
+        except Exception:
+            return "record_info=unknown"
+    
     def process_record(self, record: tuple) -> bool:
         """Process a single record from source table"""
+        record_id = self.get_record_identifier(record)
+        
         try:
             # Debug: Print record structure for first few records
             if self.stats['total_records'] < 3:
@@ -419,42 +432,64 @@ class QuizConverter:
                         break
             
             if serialized_data is None:
-                logger.error("No serialized data found in record. Record: {}".format(record[:3]))
+                logger.error("❌ FAILED [{}]: No serialized data found in record".format(record_id))
+                self.log_failed_record(record_id, "No serialized data found")
                 return False
             
-            if data_column_index != 1:
-                logger.info("Found serialized data in column {} (not column 1)".format(data_column_index))
+            if data_column_index != 1 and self.stats['total_records'] < 5:
+                logger.info("Found serialized data in column {} (not column 1) for {}".format(data_column_index, record_id))
             
             # Parse PHP data
             question_data = PHPDataParser.parse_php_data(serialized_data)
             if not question_data:
-                logger.error("Failed to parse data from column {}".format(data_column_index))
+                logger.error("❌ FAILED [{}]: Failed to parse PHP serialized data from column {}".format(record_id, data_column_index))
+                self.log_failed_record(record_id, "PHP parsing failed", str(serialized_data)[:200])
                 return False
             
             # Insert quiz
             quiz_table_id = self.insert_quiz(question_data.quiz_id, "Quiz {}".format(question_data.quiz_id))
             if not quiz_table_id:
-                logger.error("Failed to insert quiz {}".format(question_data.quiz_id))
+                logger.error("❌ FAILED [{}]: Failed to insert quiz {}".format(record_id, question_data.quiz_id))
+                self.log_failed_record(record_id, "Quiz insertion failed", "quiz_id={}".format(question_data.quiz_id))
                 return False
             
             # Insert question
             question_table_id = self.insert_question(question_data)
             if not question_table_id:
-                logger.error("Failed to insert question {}".format(question_data.question_id))
+                logger.error("❌ FAILED [{}]: Failed to insert question {}".format(record_id, question_data.question_id))
+                self.log_failed_record(record_id, "Question insertion failed", "question_id={}".format(question_data.question_id))
                 return False
             
             # Insert question options
             if not self.insert_question_options(question_table_id, question_data):
-                logger.warning("Some options failed for question {}".format(question_data.question_id))
+                logger.warning("⚠️  WARNING [{}]: Some options failed for question {}".format(record_id, question_data.question_id))
+                # Don't return False here, as partial success is still progress
             
             # Insert quiz-question mapping
-            self.insert_quiz_question_mapping(quiz_table_id, question_table_id)
+            if not self.insert_quiz_question_mapping(quiz_table_id, question_table_id):
+                logger.warning("⚠️  WARNING [{}]: Failed to create quiz-question mapping".format(record_id))
+            
+            # Log successful processing occasionally
+            if self.stats['successful_conversions'] % 100 == 0:
+                logger.info("✅ SUCCESS [{}]: Processed question {} for quiz {}".format(
+                    record_id, question_data.question_id, question_data.quiz_id))
             
             return True
             
         except Exception as e:
-            logger.error("Error processing record: {}".format(e))
+            logger.error("❌ FAILED [{}]: Exception during processing - {}".format(record_id, e))
+            self.log_failed_record(record_id, "Exception", str(e))
+            import traceback
+            logger.error("Traceback: {}".format(traceback.format_exc()))
             return False
+    
+    def log_failed_record(self, record_id: str, reason: str, details: str = ""):
+        """Log failed record details to a separate file for debugging"""
+        try:
+            with open('failed_records.log', 'a', encoding='utf-8') as f:
+                f.write("FAILED: {} | Reason: {} | Details: {}\n".format(record_id, reason, details))
+        except Exception as e:
+            logger.error("Failed to write to failed_records.log: {}".format(e))
     
     def convert_data(self, source_table: str, batch_size: int = 100):
         """Main conversion method"""
@@ -503,6 +538,16 @@ class QuizConverter:
         logger.info("=== Conversion Statistics ===")
         for key, value in self.stats.items():
             logger.info("{}: {}".format(key.replace('_', ' ').title(), value))
+        
+        # Add information about failed records log
+        if self.stats['failed_conversions'] > 0:
+            logger.info("=" * 40)
+            logger.info("❌ FAILED RECORDS: {}".format(self.stats['failed_conversions']))
+            logger.info("📄 Check 'failed_records.log' for detailed failure information")
+            logger.info("   Each failed record shows: meta_id, post_id, reason, and details")
+            logger.info("   Use this information to debug specific problematic records")
+        else:
+            logger.info("✅ All records processed successfully!")
 
 def main():
     """Main function"""
