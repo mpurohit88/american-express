@@ -10,8 +10,7 @@ to a normalized relational schema with separate tables for:
 - quiz_questions (mapping table)
 """
 
-import mysql.connector
-from mysql.connector import Error
+import pymysql
 import phpserialize
 import logging
 import sys
@@ -58,18 +57,18 @@ class DatabaseManager:
     def connect(self):
         """Establish database connection"""
         try:
-            self.connection = mysql.connector.connect(
+            self.connection = pymysql.connect(
                 host=self.host,
                 user=self.user,
                 password=self.password,
                 database=self.database,
                 charset='utf8mb4',
-                collation='utf8mb4_unicode_ci'
+                autocommit=False
             )
-            self.cursor = self.connection.cursor(buffered=True)
+            self.cursor = self.connection.cursor()
             logger.info("Database connection established")
             return True
-        except Error as e:
+        except Exception as e:
             logger.error(f"Error connecting to database: {e}")
             return False
     
@@ -87,7 +86,7 @@ class DatabaseManager:
             self.cursor.execute(query, params)
             self.connection.commit()
             return True
-        except Error as e:
+        except Exception as e:
             logger.error(f"Error executing query: {e}")
             self.connection.rollback()
             return False
@@ -97,7 +96,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query, params)
             return self.cursor.fetchall()
-        except Error as e:
+        except Exception as e:
             logger.error(f"Error fetching data: {e}")
             return []
 

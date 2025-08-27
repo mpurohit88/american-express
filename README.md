@@ -20,6 +20,8 @@ pip install -r requirements.txt
 
 2. Ensure your MySQL database is accessible and you have the necessary permissions.
 
+**Note**: This script uses `pymysql` as the MySQL driver, which is a pure Python implementation and doesn't require additional system-level MySQL client libraries.
+
 ## Database Schema
 
 The script creates the following tables:
