@@ -393,13 +393,42 @@ class QuizConverter:
     def process_record(self, record: tuple) -> bool:
         """Process a single record from source table"""
         try:
-            # Assuming record structure: (id, serialized_data, ...)
-            # Adjust index based on your source table structure
-            serialized_data = record[1]  # Adjust this index as needed
+            # Debug: Print record structure for first few records
+            if self.stats['total_records'] < 3:
+                logger.info("DEBUG: Record structure - Length: {}, Types: {}".format(
+                    len(record), [type(x).__name__ for x in record]
+                ))
+                for i, value in enumerate(record):
+                    if isinstance(value, (str, bytes)) and len(str(value)) > 50:
+                        logger.info("  [{}]: {} ({} chars)".format(i, str(value)[:50], len(str(value))))
+                    else:
+                        logger.info("  [{}]: {} ({})".format(i, value, type(value).__name__))
+            
+            # Try to find the serialized data column
+            serialized_data = None
+            data_column_index = None
+            
+            # Look for serialized data in each column
+            for i, value in enumerate(record):
+                if isinstance(value, (str, bytes)):
+                    value_str = str(value)
+                    # Check if this looks like PHP serialized data
+                    if ('a:' in value_str and 's:' in value_str) or ('question_id' in value_str):
+                        serialized_data = value
+                        data_column_index = i
+                        break
+            
+            if serialized_data is None:
+                logger.error("No serialized data found in record. Record: {}".format(record[:3]))
+                return False
+            
+            if data_column_index != 1:
+                logger.info("Found serialized data in column {} (not column 1)".format(data_column_index))
             
             # Parse PHP data
             question_data = PHPDataParser.parse_php_data(serialized_data)
             if not question_data:
+                logger.error("Failed to parse data from column {}".format(data_column_index))
                 return False
             
             # Insert quiz
