@@ -106,35 +106,75 @@ class PHPDataParser:
     """Handles parsing of PHP serialized data"""
     
     @staticmethod
-    def parse_php_data(serialized_data: str) -> Optional[QuestionData]:
+    def _safe_get(data, key, default=None):
+        """Safely get data from dict, handling both string and byte keys"""
+        if isinstance(key, str):
+            # Try both string and byte versions of the key
+            return data.get(key, data.get(key.encode('utf-8'), default))
+        return data.get(key, default)
+    
+    @staticmethod
+    def _safe_decode(value):
+        """Safely decode bytes to string"""
+        if isinstance(value, bytes):
+            return value.decode('utf-8')
+        return value
+    
+    @staticmethod
+    def parse_php_data(serialized_data) -> Optional[QuestionData]:
         """Parse PHP serialized data into QuestionData object"""
         try:
-            # Handle potential encoding issues
-            if isinstance(serialized_data, str):
+            # Handle different input types
+            if isinstance(serialized_data, dict):
+                # Data is already parsed
+                data = serialized_data
+            elif isinstance(serialized_data, str):
+                # Data is a string, need to parse
                 serialized_data = serialized_data.encode('utf-8')
+                data = phpserialize.loads(serialized_data)
+            elif isinstance(serialized_data, bytes):
+                # Data is bytes, parse directly
+                data = phpserialize.loads(serialized_data)
+            else:
+                logger.error("Unsupported data type: {}".format(type(serialized_data)))
+                return None
             
-            data = phpserialize.loads(serialized_data)
+            # Helper function to get nested value
+            def get_field_value(field_name, default=None):
+                field_data = PHPDataParser._safe_get(data, field_name, {})
+                if isinstance(field_data, dict):
+                    value = PHPDataParser._safe_get(field_data, 'value', default)
+                    return PHPDataParser._safe_decode(value)
+                return default
             
             # Extract basic information
-            question_id = data.get('question_id', {}).get('value', 0)
-            title = data.get('title', {}).get('value', '')
-            quiz_id = data.get('quiz_id', {}).get('value', 0)
-            question_type = data.get('question_type', {}).get('value', '')
+            question_id = get_field_value('question_id', 0)
+            title = get_field_value('title', '')
+            quiz_id = get_field_value('quiz_id', 0)
+            question_type = get_field_value('question_type', '')
             
             # Extract answers
-            answers_data = data.get('answers', {}).get('value', {})
+            answers_field = PHPDataParser._safe_get(data, 'answers', {})
+            answers_data = PHPDataParser._safe_get(answers_field, 'value', {})
             answers = []
+            
             for i, answer_data in answers_data.items():
-                if isinstance(answer_data, dict) and answer_data.get('answer', '').strip():
-                    answers.append({
-                        'index': int(i),
-                        'text': answer_data.get('answer', ''),
-                        'image': answer_data.get('image', 0)
-                    })
+                if isinstance(answer_data, dict):
+                    answer_text = PHPDataParser._safe_get(answer_data, 'answer', '')
+                    answer_text = PHPDataParser._safe_decode(answer_text)
+                    
+                    if answer_text and answer_text.strip():
+                        answers.append({
+                            'index': int(i),
+                            'text': answer_text,
+                            'image': PHPDataParser._safe_get(answer_data, 'image', 0)
+                        })
             
             # Extract correct answers
-            selected_data = data.get('selected', {}).get('value', {})
+            selected_field = PHPDataParser._safe_get(data, 'selected', {})
+            selected_data = PHPDataParser._safe_get(selected_field, 'value', {})
             correct_answers = []
+            
             if isinstance(selected_data, dict):
                 for idx in selected_data.values():
                     if isinstance(idx, int):
@@ -143,24 +183,26 @@ class PHPDataParser:
                 correct_answers = [int(x) for x in selected_data if str(x).isdigit()]
             
             # Extract additional fields
-            extra_text = data.get('extra_text', {}).get('value', '')
-            tooltip = data.get('tooltip', {}).get('value', '')
-            featured_image = data.get('featured_image', {}).get('value', '')
+            extra_text = get_field_value('extra_text', '')
+            tooltip = get_field_value('tooltip', '')
+            featured_image = get_field_value('featured_image', '')
             
             return QuestionData(
-                question_id=int(question_id),
-                title=title,
-                quiz_id=int(quiz_id),
-                question_type=question_type,
+                question_id=int(question_id) if question_id else 0,
+                title=str(title) if title else '',
+                quiz_id=int(quiz_id) if quiz_id else 0,
+                question_type=str(question_type) if question_type else '',
                 answers=answers,
                 correct_answers=correct_answers,
-                extra_text=extra_text,
-                tooltip=tooltip,
-                featured_image=featured_image
+                extra_text=str(extra_text) if extra_text else '',
+                tooltip=str(tooltip) if tooltip else '',
+                featured_image=str(featured_image) if featured_image else ''
             )
             
         except Exception as e:
             logger.error("Error parsing PHP data: {}".format(e))
+            import traceback
+            logger.error("Traceback: {}".format(traceback.format_exc()))
             return None
 
 class QuizConverter:
